@@ -7,6 +7,9 @@ from sklearn.ensemble import RandomForestClassifier
 
 # Initialize the Dash application framework
 app = dash.Dash(__name__)
+application = app.server
+server = app.server
+
 server = app.server  # Required by Render's WSGI server to scale on the cloud
 
 # ==========================================
