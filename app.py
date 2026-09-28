@@ -10,8 +10,6 @@ app = dash.Dash(__name__)
 application = app.server
 server = app.server
 
-server = app.server  # Required by Render's WSGI server to scale on the cloud
-
 # ==========================================
 # 1. CORE MACHINE LEARNING ENGINE (SIH26001)
 # ==========================================
@@ -28,7 +26,6 @@ def initialize_ml_pipeline():
         'elevation': np.random.uniform(500, 3000, samples),
         'deforestation_idx': np.random.uniform(0.1, 0.9, samples)
     })
-    # Landslide trigger threshold function logic
     y_mock = ((X_mock['rainfall_24h']/350 + X_mock['slope_angle']/60 + X_mock['soil_moisture']/95) > 1.2).astype(int)
     pipeline = RandomForestClassifier(n_estimators=50, random_state=42)
     pipeline.fit(X_mock, y_mock)
@@ -41,16 +38,16 @@ ml_pipeline = initialize_ml_pipeline()
 # ==========================================
 app.layout = html.Div(style={'fontFamily': 'Segoe UI, Arial, sans-serif', 'padding': '40px', 'backgroundColor': '#f4f6f9'}, children=[
     
-    # Official Hackathon Header Banner Module
+    # Header Banner Module
     html.Div(style={'textAlign': 'center', 'marginBottom': '30px', 'padding': '20px', 'backgroundColor': '#2c3e50', 'borderRadius': '8px', 'color': 'white'}, children=[
         html.H1("🌋 MDoNER AI Landslide Early Warning Engine", style={'margin': '0 0 10px 0', 'fontSize': '28px'}),
-        html.P("Smart India Hackathon Cloud Prototype Node • Problem Statement Statement ID: SIH26001", style={'margin': '0', 'opacity': '0.8', 'fontSize': '14px'})
+        html.P("Smart India Hackathon Cloud Prototype Node • Problem Statement ID: SIH26001", style={'margin': '0', 'opacity': '0.8', 'fontSize': '14px'})
     ]),
     
-    # Dashboard Grid Splitting Panels
+    # Dashboard Grid
     html.Div(style={'display': 'flex', 'gap': '30px', 'flexWrap': 'wrap'}, children=[
         
-        # Left Grid Section: Interactive Telemetry Controls
+        # Left Section: Controls
         html.Div(style={'flex': '1', 'minWidth': '320px', 'backgroundColor': 'white', 'padding': '25px', 'borderRadius': '8px', 'boxShadow': '0 4px 10px rgba(0,0,0,0.05)'}, children=[
             html.H3("📡 Live Telemetry Input Hub", style={'borderBottom': '2px solid #f1f3f5', 'paddingBottom': '10px', 'color': '#343a40', 'marginTop': '0'}),
             
@@ -79,14 +76,14 @@ app.layout = html.Div(style={'fontFamily': 'Segoe UI, Arial, sans-serif', 'paddi
             ]),
         ]),
         
-        # Right Grid Section: AI Decision Outputs
+        # Right Section: Outputs
         html.Div(style={'flex': '1.5', 'minWidth': '400px', 'backgroundColor': 'white', 'padding': '25px', 'borderRadius': '8px', 'boxShadow': '0 4px 10px rgba(0,0,0,0.05)'}, children=[
             html.H3("📊 AI Model Prediction Analysis", style={'borderBottom': '2px solid #f1f3f5', 'paddingBottom': '10px', 'color': '#343a40', 'marginTop': '0'}),
             
             # Dynamic Target Status Block Component
-            html.Div(id='alert-badge', style={'padding': '18px', 'borderRadius': '6px', 'color': 'white', 'fontSize': '20px', 'fontWeight': 'bold', 'textAlign': 'center', 'transition': 'all 0.3s ease'}),
+            html.Div(id='alert-badge', style={'padding': '18px', 'borderRadius': '6px', 'color': 'white', 'fontSize': '20px', 'fontWeight': 'bold', 'textAlign': 'center', 'transition': 'all 0.3s ease', 'marginBottom': '20px'}),
             
-            html.Div(style={'marginTop': '25px', 'padding': '15px', 'backgroundColor': '#f8f9fa', 'borderRadius': '6px', 'borderLeft': '4px solid #adb5bd'}, children=[
+            html.Div(style={'padding': '15px', 'backgroundColor': '#f8f9fa', 'borderRadius': '6px', 'borderLeft': '4px solid #adb5bd'}, children=[
                 html.H4("💡 Diagnostic Vector Summary", style={'margin': '0 0 10px 0', 'color': '#495057'}),
                 html.Div(id='risk-percentage-text', style={'fontSize': '16px', 'fontWeight': '600', 'marginBottom': '8px', 'color': '#212529'}),
                 html.Div(id='directive-text', style={'fontSize': '14px', 'color': '#495057', 'lineHeight': '1.5'})
@@ -108,34 +105,30 @@ app.layout = html.Div(style={'fontFamily': 'Segoe UI, Arial, sans-serif', 'paddi
      Input('moist-slider', 'value')]
 )
 def update_diagnostics(region, rainfall, moisture):
-    # Setup varying localized environmental constant profiles to simulate geographic traits
     geo_constants = {'Cherrapunji': [48.0, 1480], 'Aizawl': [38.5, 1120], 'Kohima': [42.0, 1440]}
     slope_angle, elevation = geo_constants.get(region, [40.0, 1200])
     
-    # Structure features into an explicit DataFrame to satisfy scikit-learn requirements
     input_df = pd.DataFrame([[slope_angle, float(rainfall), float(moisture), elevation, 0.65]], columns=FEATURE_NAMES)
     
-    # Calculate probability via model pipeline
-    risk_prob = float(ml_pipeline.predict_proba(input_df))
+    # FIXED: Added [0][1] index to correctly pull the probability scalar value from the numpy array
+    risk_prob = float(ml_pipeline.predict_proba(input_df)[0][1])
     risk_percentage = round(risk_prob * 100, 2)
     
-    # Automated Alert Threshold Trigger Logic
     if risk_percentage < 35.0:
         badge_text = "🟩 GREEN STATUS: NORMAL OPERATIONS"
-        badge_style = {'backgroundColor': '#2ecc71', 'padding': '18px', 'borderRadius': '6px', 'color': 'white', 'fontWeight': 'bold', 'textAlign': 'center'}
+        badge_style = {'backgroundColor': '#2ecc71', 'padding': '18px', 'borderRadius': '6px', 'color': 'white', 'fontWeight': 'bold', 'textAlign': 'center', 'marginBottom': '20px'}
         directive = f"Target zone status within acceptable parameters. Live connection node active for regional array at {region}. No active evacuation protocols required."
     elif risk_percentage < 70.0:
         badge_text = "🟨 YELLOW STATUS: WATCH NOTICE TRIGGERED"
-        badge_style = {'backgroundColor': '#f1c40f', 'padding': '18px', 'borderRadius': '6px', 'color': 'white', 'fontWeight': 'bold', 'textAlign': 'center'}
+        badge_style = {'backgroundColor': '#f1c40f', 'padding': '18px', 'borderRadius': '6px', 'color': 'white', 'fontWeight': 'bold', 'textAlign': 'center', 'marginBottom': '20px'}
         directive = f"Warning status active for {region} cluster. Heavy hillside excavation, blasting, and road-widening works should be temporarily halted. Civil control cells notified."
     else:
         badge_text = "🟥 RED ALERT STATUS: EMERGENCY EVACUATION CRITICAL"
-        badge_style = {'backgroundColor': '#e74c3c', 'padding': '18px', 'borderRadius': '6px', 'color': 'white', 'fontWeight': 'bold', 'textAlign': 'center'}
+        badge_style = {'backgroundColor': '#e74c3c', 'padding': '18px', 'borderRadius': '6px', 'color': 'white', 'fontWeight': 'bold', 'textAlign': 'center', 'marginBottom': '20px'}
         directive = f"🚨 CRITICAL ACTION REQUIRED: High probability of structural slope failure calculated near the {region} node! Trigger automated public address sirens and mobilize local disaster management teams immediately."
         
     return badge_text, badge_style, f"Calculated Landslide Probability Matrix: {risk_percentage}%", directive
 
 if __name__ == '__main__':
-    # Grab port mapped by cloud container hosting stack environment variables
     port = int(os.environ.get("PORT", 8050))
     app.run_server(host='0.0.0.0', port=port, debug=False)
